@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synergychat-crawler
+  namespace: crawler
+  labels:
+    app: synergychat-crawler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: synergychat-crawler
+  template:
+    metadata:
+      labels:
+        app: synergychat-crawler
+    spec:
+      volumes:                       # 1. Create the Shared Volume
+      - name: cache-volume
+        emptyDir: {}
+      containers:
+      # --- CONTAINER 1 (Default Port 8080) ---
+      - name: synergychat-crawler-1
+        image: bootdotdev/synergychat-crawler:latest
+        volumeMounts:                # Mount the volume
+        - name: cache-volume
+          mountPath: /cache
+        envFrom:
+          - configMapRef:
+              name: synergychat-crawler-configmap
+
+      # --- CONTAINER 2 (Port 8081) ---
+      - name: synergychat-crawler-2
+        image: bootdotdev/synergychat-crawler:latest
+        volumeMounts:                # Mount the same volume
+        - name: cache-volume
+          mountPath: /cache
+        env:                         # Manual Env Mapping
+        - name: CRAWLER_PORT         # The app expects this variable name
+          valueFrom:
+            configMapKeyRef:
+              name: synergychat-crawler-configmap
+              key: CRAWLER_PORT_2    # We feed it the value "8081"
+        - name: CRAWLER_DB_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: synergychat-crawler-configmap
+              key: CRAWLER_DB_PATH
+        - name: CRAWLER_KEYWORDS
+          valueFrom:
+            configMapKeyRef:
+              name: synergychat-crawler-configmap
+              key: CRAWLER_KEYWORDS
+
+      # --- CONTAINER 3 (Port 8082) ---
+      - name: synergychat-crawler-3
+        image: bootdotdev/synergychat-crawler:latest
+        volumeMounts:                # Mount the same volume
+        - name: cache-volume
+          mountPath: /cache
+        env:
+        - name: CRAWLER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: synergychat-crawler-configmap
+              key: CRAWLER_PORT_3    # We feed it the value "8082"
+        - name: CRAWLER_DB_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: synergychat-crawler-configmap
+              key: CRAWLER_DB_PATH
+        - name: CRAWLER_KEYWORDS
+          valueFrom:
+            configMapKeyRef:
+              name: synergychat-crawler-configmap
+              key: CRAWLER_KEYWORDS
